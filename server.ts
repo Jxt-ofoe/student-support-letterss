@@ -154,11 +154,25 @@ app.delete("/api/admin/pending/:id", async (req, res) => {
 async function start() {
   await initDb();
   
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: "spa",
-  });
-  app.use(vite.middlewares);
+  if (process.env.NODE_ENV === "production") {
+    // Serve static files from dist
+    app.use(express.static("dist"));
+    // SPA fallback - serve index.html for all non-API routes
+    app.get("*", (req, res) => {
+      res.sendFile("dist/index.html", { root: process.cwd() });
+    });
+  } else {
+    // Development: use Vite middleware
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+    // SPA fallback
+    app.use("*", (req, res) => {
+      res.redirect("/");
+    });
+  }
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server on http://localhost:${PORT}`);
