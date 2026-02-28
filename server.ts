@@ -154,12 +154,21 @@ app.delete("/api/admin/pending/:id", async (req, res) => {
 async function start() {
   await initDb();
   
-  if (process.env.NODE_ENV === "production") {
-    // Serve static files from dist
+  // Check if dist exists (production build)
+  const fs = await import("fs");
+  const distExists = fs.existsSync("dist");
+  
+  if (distExists) {
+    // Production: serve static files
     app.use(express.static("dist"));
     // SPA fallback - serve index.html for all non-API routes
     app.get("*", (req, res) => {
-      res.sendFile("dist/index.html", { root: process.cwd() });
+      const filePath = "dist/index.html";
+      if (fs.existsSync(filePath)) {
+        res.sendFile(filePath, { root: process.cwd() });
+      } else {
+        res.status(404).json({ error: "index.html not found" });
+      }
     });
   } else {
     // Development: use Vite middleware
